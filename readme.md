@@ -1,7 +1,7 @@
 # Venda de imóveis em King County, EUA
 
 ## Identificação de imóveis para compra e revenda
-![](project\header.png)
+![](.\project\header.png)
 
 # 1. Objetivo
 - Gerar insight através da análise e manipulação dos dados para auxiliar a tomada de decisão do time de negócio
