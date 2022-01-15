@@ -48,7 +48,7 @@
 - Agendar a coleta dos dados atualizados e execução do script automaticamente.
 - Criar arquivos de log.
 #
-### <a href="https://p00-kingcounty.herokuapp.com/" target="_blank">Clique aqui para acessar a solução</a>
+### [Clique aqui para acessar a solução](https://p00-kingcounty.herokuapp.com/)
 
 
 
