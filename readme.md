@@ -1,7 +1,7 @@
 # Venda de imóveis em King County, EUA
 
 ## Identificação de imóveis para compra e revenda
-![](.\project\header.png)
+![](./project/header.png)
 
 # 1. Objetivo
 - Gerar insight através da análise e manipulação dos dados para auxiliar a tomada de decisão do time de negócio
@@ -23,19 +23,19 @@
 - Imóveis com custo acima da mediana terão uma margem de 10%, os demais, margem de 30%.
 # 5. Principais insights
 **Hipótese 1:** Imóveis com vista para água são mais caros que a média geral do portifolio.
-![](project\h1.png)
+![](./project/h1.png)
 **Verdadeiro.** O valor dos imóveis com vista para a água apresentam variação de 206,82% em relação à média geral.
 
 **Hipótese 2:** Crescimento médio do preço dos imóveis Year over Year (YoY) é de 10%.
-![](project\h2.png)
+![](./project/h2.png)
 **Falso.** A variação percentual do valor médio dos imóveis YoY é de 0,18%.
 
 **Hipótese 3:** Imóveis antigos que passaram por reforma são, em média, mais caros do que imóveis novos.
-![](project\h3.png)
+![](./project/h3.png)
 **Verdadeiro.** A diferença da média do valor dos imóveis antigos reformados em relação aos imóveis novos é de 23,20%.
 
 **Hipótese 4:** Imóveis sem porão tem terrenos maiores do que os imóveis com porão (em média).
-![](project\h4.png)
+![](./project/h4.png)
 **Verdadeiro.** A diferença percentual da área total dos imóveis sem porão em relação aos imóveis com porão é de 22,79%.
 
 # 6. Resultados financeiros
@@ -48,7 +48,7 @@
 - Agendar a coleta dos dados atualizados e execução do script automaticamente.
 - Criar arquivos de log.
 #
-### [Clique aqui para acessar a solução](https://p00-kingcounty.herokuapp.com/)
+### <a href="https://p00-kingcounty.herokuapp.com/" target="_blank">Clique aqui para acessar a solução</a>
 
 
 
