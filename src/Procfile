@@ -1,0 +1,4 @@
+web: sh setup.sh && streamlit run __init__.py
+
+
+
