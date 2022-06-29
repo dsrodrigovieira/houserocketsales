@@ -1,4 +1,4 @@
-# Venda de imóveis em King County, EUA
+# [Venda de imóveis em King County, EUA](https://dsr-houserocketsales.herokuapp.com/)
 
 ## Identificação de imóveis para compra e revenda
 ![](reports/figures/readme/header.png)
@@ -45,8 +45,6 @@
 # 8. Melhorias
 - Agendar a coleta dos dados atualizados e execução do script automaticamente.
 - Criar arquivos de log.
-#
-### [Clique aqui para acessar a solução](https://dsr-houserocketsales.herokuapp.com/)
 
 
 
