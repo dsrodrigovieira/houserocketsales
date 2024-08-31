@@ -68,24 +68,6 @@ def set_filters( data ):
     return f_zipcode, f_filters
 
 def get_geolocation ( data ):
-    #geolocation = data.loc[data['sn_compra'] == 'y'][['id', 'lat', 'long']].copy().reset_index( drop=True )
-    #geolocator = Nominatim( user_agent='geoapiExercises' )
-    #geolocation['street'] = 'NA'
-    #geolocation['house_num'] = 'NA'
-    #geolocation['city'] = 'NA'
-    #geolocation['neighbourhood'] = 'NA'
-    #geolocation['state'] = 'NA'
-    #for i in range( len( geolocation ) ):
-    #    query = str( geolocation.loc[i, 'lat'] ) + ',' + str( geolocation.loc[i, 'long'] )
-    #    response = geolocator.reverse( query, timeout=10000 )
-    #    response = pd.json_normalize( response.raw['address'] )
-    #    geolocation.iloc[i, 3] = response.apply( lambda x: x['road'] if 'road' in response.columns else 'NA', axis = 1 )    
-    #    geolocation.iloc[i, 4] = response.apply( lambda x: x['house_number'] if 'house_number' in response.columns else 'NA', axis = 1 )
-    #    geolocation.iloc[i, 5] = response.apply( lambda x: x['city'] if 'city' in response.columns else 'NA', axis = 1 )
-    #    geolocation.iloc[i, 6] = response.apply( lambda x: x['neighbourhood'] if 'neighbourhood' in response.columns else
-    #                                                       x['county'] if 'county' in response.columns else 'NA', axis = 1 )
-    #    geolocation.iloc[i, 7] = response.apply( lambda x: x['state'] if 'state' in response.columns else 'NA', axis = 1 )
-    #geolocation['address'] = geolocation['street'] + ', ' + geolocation['house_num']
     
     geolocation = pd.read_csv('data/geoloc.csv')
 
