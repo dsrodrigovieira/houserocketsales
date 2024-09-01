@@ -1,6 +1,9 @@
 import pandas as pd
 import logging
-logging.basicConfig(filename='load.log',level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+#import os
+
+#current_file = os.path.basename(__file__) 
+#logging.basicConfig(filename='houserocket.log',level=logging.INFO, format=f'{current_file}: %(asctime)s - %(levelname)s - %(message)s')
 
 class Load(object):
 

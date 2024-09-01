@@ -1,29 +1,27 @@
 import pandas as pd
 import numpy  as np
 import logging
+import os
 from geopy.geocoders import Nominatim
 
-logging.basicConfig(filename='extract.log',level=logging.INFO,format='%(asctime)s - %(levelname)s - %(message)s')
+#current_file = os.path.basename(__file__) 
+#logging.basicConfig(filename='houserocket.log',level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Extract (object):
-    '''
-    '''
+
     def __init__(self) -> None:
         pass
 
     def get_data(file_path=str, date_cols=list) -> pd.DataFrame:
-        """Retrieve raw data from CSV file.\n
-        Keyword arguments:\n
-        \tfile_path -- path to csv\n
-        \tdate_cols -- columns with datetime data
-        """
+        """Retrieve raw data from CSV file."""
         if file_path == None or date_cols == None or date_cols == []:
-            logging.error("Couldn't find raw data file path or date column name. Value is empty.")
+            logging.error(f"get_data@{os.path.basename(__file__)} - Couldn't find raw data file path or date column name. Value is empty.")
         else:
             try:
                 df = pd.read_csv(filepath_or_buffer=file_path, parse_dates=date_cols)
+                df = df.drop_duplicates(subset='id',keep='last')
             except FileNotFoundError as error:
-                logging.error(f"Couldn't retrieve raw data. {error}")        
+                logging.error(f"get_data@{os.path.basename(__file__)} - Couldn't retrieve raw data. {error}")        
         return df
     
     def get_geolocation(dataframe=pd.DataFrame) -> pd.DataFrame:
