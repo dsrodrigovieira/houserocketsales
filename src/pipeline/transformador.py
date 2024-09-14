@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy  as np
-import logging
 
 class Transformador(object):
     """Classe responsável pela transformação dos dados."""
@@ -34,8 +33,7 @@ class Transformador(object):
             dataframe['floors']    = dataframe['floors'].astype('int64')
             return dataframe
         except ValueError as error:
-            logging.error(f"Erro ao corrigir tipos de dados: {error}")
-        raise
+            raise error
     
     def remover_colunas(self, dataframe: pd.DataFrame, colunas_remocao: list[str]) -> pd.DataFrame:
         """Remove colunas desnecessárias do DataFrame.
@@ -57,8 +55,7 @@ class Transformador(object):
         try:
             return dataframe.drop(columns=colunas_remocao)
         except ValueError as error:
-            logging.error(f"Erro ao remover colunas: {error}")
-        raise
+            raise error
 
     def tratar_outliers(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         """Trata outliers (valores discrepantes) no DataFrame.
@@ -84,8 +81,7 @@ class Transformador(object):
             dataframe.loc[dataframe[coluna_esperada] == 33, coluna_esperada] = 3
             return dataframe
         except ValueError as error:
-            logging.error(f"Erro ao tratar outliers: {error}")
-        raise  
+            raise error 
 
     def criar_novos_atributos(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         """Cria novas colunas derivadas a partir de colunas existentes.
@@ -116,8 +112,7 @@ class Transformador(object):
             dataframe['condition_type'] = dataframe['condition'].apply(lambda x: 'Bom' if x==5 else 'Regular' if x in(3,4) else 'Ruim')
             return dataframe
         except ValueError as error:
-            logging.error(f"Erro ao criar novas atributos: {error}")
-        raise 
+            raise error
 
     def calcular_mediana_por_regiao(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         """Calcula a mediana do preço por região.
@@ -144,8 +139,7 @@ class Transformador(object):
             regional_median.columns = ['zipcode', 'regional_median']
             return regional_median
         except ValueError as error:
-            logging.error(f"Erro ao calcular mediana por região: {error}")
-        raise
+            raise error
 
     def calcular_mediana_por_estacao_regiao(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         """Calcula a mediana do preço por estação por região.
@@ -172,8 +166,7 @@ class Transformador(object):
             season_region_median = season_region_median.rename(columns={'price': 'season_region_median'}).reset_index(drop=False)
             return season_region_median
         except ValueError as error:
-            logging.error(f"Erro ao calcular mediana por estação por região: {error}")
-        raise
+            raise error
        
     def criar_dataframe_final(self, dataframe: pd.DataFrame, df_regional_median: pd.DataFrame, df_season_region_median: pd.DataFrame) -> pd.DataFrame:
         """Cria o DataFrame final para análise de compra e venda.
@@ -208,5 +201,4 @@ class Transformador(object):
             dataframe['profit'] = dataframe.apply(lambda x: x['sell_price'] - x['price'] if x['buy'] == 'Sim' else 0, axis=1)
             return dataframe
         except ValueError as error:
-            logging.error(f"Erro ao criar dataframe final: {error}")
-        raise
+            raise error

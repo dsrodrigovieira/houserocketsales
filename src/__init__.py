@@ -1,14 +1,11 @@
 # libraries
 import base64
 import config
-import logging
 import streamlit            as st
 import unicode_emoji        as emoji
 from pipeline.extrator      import Extrator
 from pipeline.transformador import Transformador
 from pipeline.carga         import Carga
-
-logging.basicConfig(filename=config.path_log,level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_base64(bin_file):
     with open(bin_file, 'rb') as f:

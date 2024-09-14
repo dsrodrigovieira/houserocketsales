@@ -1,5 +1,4 @@
 import pandas as pd
-import logging
 from geopy.geocoders import Nominatim
 
 class Extrator(object):
@@ -32,8 +31,7 @@ class Extrator(object):
             df = df.drop_duplicates(subset="id", keep="last")  # Remove duplicatas mantendo a última
             return df
         except FileNotFoundError as error:
-            logging.error(f"Erro ao recuperar dados brutos: {error}")            
-        raise
+            raise error
         
     def obter_geolocalizacao(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         """Recupera dados de geolocalização usando a API Nominatim.
@@ -77,5 +75,4 @@ class Extrator(object):
                     dataframe.fillna("NA")
             return dataframe
         except KeyError as error:
-            logging.error(f"Erro ao obter geolocalização: {error}")
-            raise
+            raise error
