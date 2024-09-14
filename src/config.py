@@ -8,9 +8,9 @@ style_background_img = '''
     }
     </style>
 '''
-logo_img = "img/logo/logo.png"
+logo_img = "src/img/logo/logo.png"
 page_title = "# House Rocket :house_with_garden:\nPESQUISA DE REVENDA DE IMÓVEIS"
-raw_data = 'data/raw/kc_house_data.csv'
+raw_data = 'src/data/raw/kc_house_data.csv'
 cols_remove = ['sqft_living15','sqft_lot15']
 raw_date_cols = ['date']
 social_linkedin = '''
