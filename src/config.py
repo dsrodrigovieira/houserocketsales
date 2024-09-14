@@ -1,5 +1,5 @@
 page_name = "House Rocket"
-background_img = "./img/background/v960-ning-30.jpg"
+background_img = "/img/background/v960-ning-30.jpg"
 style_background_img = '''
     <style>
     .stApp {
