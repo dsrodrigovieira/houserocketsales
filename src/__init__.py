@@ -51,19 +51,19 @@ if __name__ == '__main__':
         st.subheader(f"Desenvolvido por Rodrigo Vieira {emoji.men_tech_dark}")
         c1, c2, c3, c4 = st.columns(4)
         c1.markdown(
-            config.social_linkedin.format(base64.b64encode(open("img/icons/linkedin-brands-solid.png", "rb").read()).decode())
+            config.social_linkedin.format(base64.b64encode(open("src/img/icons/linkedin-brands-solid.png", "rb").read()).decode())
             ,unsafe_allow_html=True
         )
         c2.markdown(
-            config.social_github.format(base64.b64encode(open("img/icons/github-brands-solid.png", "rb").read()).decode())
+            config.social_github.format(base64.b64encode(open("src/img/icons/github-brands-solid.png", "rb").read()).decode())
             ,unsafe_allow_html=True
         )   
         c3.markdown(
-            config.social_medium.format(base64.b64encode(open("img/icons/medium-brands-solid.png", "rb").read()).decode())
+            config.social_medium.format(base64.b64encode(open("src/img/icons/medium-brands-solid.png", "rb").read()).decode())
             ,unsafe_allow_html=True
         )     
         c4.markdown(
-            config.social_email.format(base64.b64encode(open("img/icons/envelope-solid.png", "rb").read()).decode())
+            config.social_email.format(base64.b64encode(open("src/img/icons/envelope-solid.png", "rb").read()).decode())
             ,unsafe_allow_html=True
         )        
         st.divider()
