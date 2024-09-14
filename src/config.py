@@ -13,7 +13,7 @@ page_title = "# House Rocket :house_with_garden:\nPESQUISA DE REVENDA DE IMÓVEI
 raw_data = 'data/raw/kc_house_data.csv'
 cols_remove = ['sqft_living15','sqft_lot15']
 raw_date_cols = ['date']
-path_log = 'logs/houserocket.log'
+path_log = '.logs/houserocket.log'
 social_linkedin = '''
     <a href="https://www.linkedin.com/in/dsrodrigovieira/">
     <img src="data:image/png;base64,{}" width="20">
