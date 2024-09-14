@@ -3,5 +3,5 @@ geopy
 matplotlib
 numpy
 pandas
-seaborn2
+seaborn
 streamlit_folium
