@@ -110,10 +110,10 @@ class Transformador(object):
         try:
             dataframe['month'] = dataframe['date'].dt.month
             dataframe['month_name'] = dataframe['date'].dt.month_name()
-            dataframe['season'] = dataframe['month'].apply(lambda x: 'Winter' if x in(12,1,2) else
-                                                                     'Spring' if x in(3,4,5)  else
-                                                                     'Summer' if x in(6,7,8)  else 'Fall' )
-            dataframe['condition_type'] = dataframe['condition'].apply(lambda x: 'Good' if x==5 else 'Regular' if x in(3,4) else 'Bad')
+            dataframe['season'] = dataframe['month'].apply(lambda x: 'Inverno' if x in(12,1,2) else
+                                                                     'Primavera' if x in(3,4,5)  else
+                                                                     'Verão' if x in(6,7,8)  else 'Outono' )
+            dataframe['condition_type'] = dataframe['condition'].apply(lambda x: 'Bom' if x==5 else 'Regular' if x in(3,4) else 'Ruim')
             return dataframe
         except ValueError as error:
             logging.error(f"Erro ao criar novas atributos: {error}")
@@ -201,11 +201,11 @@ class Transformador(object):
         try:
             # Merge dataframes e criar colunas de recomendação
             dataframe = pd.merge(dataframe.copy(), df_regional_median, how='left', on='zipcode')
-            dataframe['buy'] = dataframe.apply(lambda x: 'Yes' if (x['price'] < x['regional_median']) & (x['condition_type'] == 'Good') else 'No', axis=1)
+            dataframe['buy'] = dataframe.apply(lambda x: 'Sim' if (x['price'] < x['regional_median']) & (x['condition_type'] == 'Bom') else 'Não', axis=1)
             dataframe = pd.merge(dataframe.copy(), df_season_region_median, how='left', on=['zipcode', 'season'])
-            dataframe['sell_price'] = dataframe.apply(lambda x: x['price'] * 1.3 if (x['price'] < x['season_region_median']) & (x['buy'] == 'Yes') else (x['price'] * 1.1 if (x['price'] >= x['season_region_median']) & (x['buy'] == 'Yes') else 0), axis=1)
+            dataframe['sell_price'] = dataframe.apply(lambda x: x['price'] * 1.3 if (x['price'] < x['season_region_median']) & (x['buy'] == 'Sim') else (x['price'] * 1.1 if (x['price'] >= x['season_region_median']) & (x['buy'] == 'Sim') else 0), axis=1)
             dataframe['diff_price'] = dataframe.apply(lambda x: np.sqrt((x['sell_price'] - x['season_region_median']) ** 2) if x['sell_price'] != 0 else 0, axis=1)
-            dataframe['profit'] = dataframe['sell_price'] - dataframe['price']
+            dataframe['profit'] = dataframe.apply(lambda x: x['sell_price'] - x['price'] if x['buy'] == 'Sim' else 0, axis=1)
             return dataframe
         except ValueError as error:
             logging.error(f"Erro ao criar dataframe final: {error}")

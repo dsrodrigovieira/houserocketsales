@@ -1,16 +1,15 @@
 # libraries
 import base64
-import pandas as pd
-import numpy as np
-import streamlit as st
-import plotly.graph_objects as go
-import folium
+import config
+import logging
+import streamlit            as st
+import unicode_emoji        as emoji
+from pipeline.extrator      import Extrator
+from pipeline.transformador import Transformador
+from pipeline.carga         import Carga
 
-from streamlit_folium import folium_static
-from folium.plugins import MarkerCluster
-from geopy.geocoders import Nominatim
+logging.basicConfig(filename=config.path_log,level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# functions
 def get_base64(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -18,253 +17,131 @@ def get_base64(bin_file):
 
 def set_background(png_file):
     bin_str = get_base64(png_file)
-    page_bg_img = '''
-    <style>
-    .stApp {
-      background-image: url("data:image/png;base64,%s");
-      background-size: cover;
-    }
-    </style>
-    ''' % bin_str
+    page_bg_img = config.style_background_img % bin_str
     st.markdown(page_bg_img, unsafe_allow_html=True)
 
-@st.cache(allow_output_mutation=True)
-def get_data( path ):
-    raw_data = pd.read_csv( path )
-
-    return raw_data
-
-def data_transformation( raw_data ):    
-    data = raw_data.copy()
-    data['date'] = pd.to_datetime(data['date'],format='%Y-%m-%d')
-    data['bathrooms'] = data['bathrooms'].astype('int64')
-    data['floors'] = data['floors'].astype('int64')
-    data = data.drop(columns=['sqft_living15','sqft_lot15'])
-    data.loc[data['bedrooms']==33,'bedrooms'] = 3
-    data = data.drop_duplicates(subset='id', keep='last')    
-
-    return data
-
-def set_features( data ):
-    data['sn_compra'] = 'NA'
-    data['condition_type'] = 'NA'
-    data['sell_price'] = 0.0
-    data['profit'] = 0.0
-    data['month'] = data['date'].dt.strftime('%m').astype('int64')
-    data['season'] = data['month'].apply(lambda x: 'Winter' if x in(12,1,2) else
-                                                'Spring' if x in(3,4,5) else
-                                                'Summer' if x in(6,7,8) else 'Fall' )
-    data['sn_compra'] = data['sn_compra'].astype('string')
-    data['condition_type'] = data['condition_type'].astype('string')
-    data['season'] = data['season'].astype('string')
-    
-    return data 
-
-def set_filters( data ):  
-    st.sidebar.title('Options :gear:')  
-    f_zipcode = st.sidebar.selectbox('Select region', data['zipcode'].sort_values().unique())
-    f_filters = st.sidebar.checkbox('Disable filters')
-
-    return f_zipcode, f_filters
-
-def get_geolocation ( data ):
-    
-    geolocation = pd.read_csv('data/geoloc.csv')
-
-    return geolocation
-
-def get_regional_median ( data ):
-    regional_median = data[['zipcode','price']].groupby('zipcode').median().reset_index().copy()
-    regional_median.columns = ['zipcode','regional_median']
-
-    return regional_median
-
-def get_season_median ( data ):
-    season_median = data[['price','zipcode','season']].groupby(['zipcode','season']).median('price')
-    season_median = season_median.rename(columns={'price': 'season_median'}).reset_index(drop=False)
-
-    return season_median
-
-def purchase_list ( data, median ):
-    purchase = pd.merge( data, median, how='left', on='zipcode' )
-    purchase['condition_type'] = purchase['condition'].apply( lambda x: 'good' if x==5 else
-                                                                        'regular' if x in(3,4) else 'bad')
-    purchase['sn_compra'] = purchase.apply( lambda x: 'y' if ( x['price'] < x['regional_median'] ) &
-                                                             ( x['condition_type'] == 'good') else 'n',
-                                                                axis=1 )
-    purchase = purchase.drop( columns=['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront',
-                                      'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built',
-                                      'yr_renovated', 'month'] )    
-    return purchase
-
-def plot_purchase( data, region, filter ):
-
-    if filter:
-        with st.empty():
-            st.info('Uncheck "Disable filters" option to see this content')
-    
-    else:
-        #Plot
-        plot_data = data.loc[data['zipcode'] == region,['id','price','zipcode','regional_median','condition_type','sn_compra']].copy().reset_index(drop=True)
-        plot_data = plot_data.reset_index(drop=False)
-        plot_data_y = plot_data.loc[plot_data['sn_compra']=='y',:].copy()
-        plot_data_n = plot_data.loc[plot_data['sn_compra']=='n',:].copy()
-        
-        # Add traces
-        plot_y = go.Scatter(x=plot_data_y['index'], y=plot_data_y['price'],
-                                marker_color = 'darkblue',
-                                mode = 'markers',
-                                text = 'ID: ' + plot_data_y['id'].astype('string') +
-                                        ' | Region: ' + plot_data_y['zipcode'].astype('string') +
-                                        ' | Condition: ' + plot_data_y['condition_type'] +
-                                        ' | Price: US$' + plot_data_y['price'].astype('string'),
-                                name = 'Buy'
-                                )
-
-        plot_n = go.Scatter(x=plot_data_n['index'], y=plot_data_n['price'],
-                                marker_color = 'grey',
-                                opacity=0.2,
-                                mode = 'markers',
-                                text = 'ID: ' + plot_data_n['id'].astype('string') +
-                                        ' | Region: ' + plot_data_n['zipcode'].astype('string') +
-                                        ' | Condition: ' + plot_data_n['condition_type'] +
-                                        ' | Price: US$' + plot_data_n['price'].astype('string'),
-                                name = 'Skip'
-                                )
-
-        plot_median = go.Scatter(y = plot_data['regional_median'],
-                                mode = 'lines',
-                                text = 'Region: ' + plot_data['zipcode'].astype('string') +
-                                        ' | Median: US$' + plot_data['regional_median'].astype('string'),
-                                name = 'Regional Median'
-                                )
-        plot = [plot_y, plot_n, plot_median]
-        layout = go.Layout(
-                legend=dict(orientation="h"),
-                template='seaborn'
-                )
-                        
-        fig = go.Figure(data=plot,layout=layout)
-
-        fig.update_layout(
-            title="Region {:}".format(region),
-            title_x=0.5,
-            xaxis_title="Houses",
-            yaxis_title="Aquisition cost",
-            font=dict( color="#000000" )
-        )   
-
-        st.subheader('Recommended houses for purchase')
-        st.plotly_chart(fig, use_container_width=True)
-
-    return None
-
-def report_sales( data, geodata, season_median, region, filter ):
-
-    #Report
-    sell = pd.merge(data,season_median,how='inner',on=['zipcode'])
-    sell = sell.loc[sell['sn_compra'] == 'y']
-    sell['sell_price'] = sell.apply(lambda x: x['price'] * 1.3 if x['price'] < x['season_median'] else x['price'] * 1.1, axis=1)
-    sell['diff_price'] = sell.apply(lambda x: np.sqrt((x['sell_price']-x['season_median'])**2),axis=1)
-
-    aux = sell[['id','diff_price']].groupby('id').min().reset_index(drop=False)
-    aux['sn_vende'] = 'y'
-
-    sell = pd.merge(sell,aux,how='left',on=['id','diff_price']).drop_duplicates(subset=['id','diff_price'])
-    sell = sell.loc[sell['sn_vende']=='y']
-
-    sell['profit'] = sell['sell_price'] - sell['price']
-
-    sell = sell.drop(columns=['date','sn_compra','condition_type','regional_median','season_median','season_x','diff_price','sn_vende'])
-    sell = pd.merge(sell,geodata[['id','address','neighbourhood','city']],how='left',on='id').rename(columns={'season_y':'season'})
-
-    insights = sell.copy()
-
-    st.subheader('Details and price suggestion')
-    if filter:
-        st.dataframe(sell[['id', 'zipcode', 'address', 'price', 'sell_price', 'season', 'profit']].rename(columns={'id': 'ID', 'zipcode': 'Region', 'address': 'Address', 'price': 'Cost',
-        'sell_price': 'Price suggestion', 'season': 'Best season to sell', 'profit': 'Profit'}).sort_values(['Region','ID']).reset_index(drop=True), height=420) 
-        
-    else:
-        sell = sell.loc[sell['zipcode'] == region]
-        st.dataframe(sell[['id', 'zipcode', 'address', 'price', 'sell_price', 'season', 'profit']].rename(columns={'id': 'ID', 'zipcode': 'Region', 'address': 'Address', 'price': 'Cost',
-        'sell_price': 'Price suggestion', 'season': 'Best season to sell', 'profit': 'Profit'}).sort_values(['Region','ID']).reset_index(drop=True), height=420) 
-
-    return sell, insights
-
-def show_map( data ):
-    
-    map_data = data
-
-    marker_map = folium.Map(location=[map_data['lat'].mean(),map_data['long'].mean()],
-                                default_zoom_start=20, width='100%')
-    marker_cluster = MarkerCluster().add_to(marker_map)
-    for name, row in map_data.iterrows():
-        folium.Marker([row['lat'],row['long']],
-                        popup='ID: {:} | Cost: US${:.2f} | Sell for US${:.2f} at {:} to earn US${:.2f} for profit'
-                        .format(row['id'],row['price'],row['sell_price'],row['season'],row['profit'])
-        ).add_to(marker_cluster)
-
-    st.subheader('View on map')
-    folium_static(marker_map)
-    
-    return None
-
-def show_insights( data ):
-    # top3 regions with more available houses to sell
-    i1 = data[['id','zipcode']].groupby('zipcode').count().sort_values('id',ascending=False).head(1).reset_index()
-
-    # top3 most valuable regions
-    i2 = data[['profit','zipcode']].groupby('zipcode').sum().sort_values('profit',ascending=False).head(1).reset_index()
-    i2['profit'] = (i2.at[0,'profit'] / 1000000)
-
-    # most valuable regions per season
-    a = data[['profit','zipcode','season']].groupby(['season','zipcode']).sum().sort_values(['season','profit'],ascending=False).reset_index()
-    b = data[['profit','zipcode','season']].groupby(['season','zipcode']).sum().groupby('season').max().reset_index()
-    i3 = pd.merge(a,b,how='right', on=['season','profit']).rename(columns={'season':'Season','zipcode':'Zipcode','profit':'Profit'})
-
-    st.subheader('Quick insights')
-    st.subheader(':cityscape: {} houses available at {}'.format(i1.at[0,'id'],i1.at[0,'zipcode']))
-    st.caption('Region with more available houses to sell')
-    st.subheader(':moneybag: US$ {:.1f}mi profit foreseen at {}'.format(i2.at[0,'profit'],i2.at[0,'zipcode']))
-    st.caption('Most valuable region')    
-    st.subheader('Most valuable regions per season')
-    st.table(i3)    
-
-    return None
-
-# application
 if __name__ == '__main__':
-    # parameters
-    st.set_page_config(layout='wide', page_title='House Rocket Sales')
-    set_background('reports/figures/bg.jpg')    
+    st.set_page_config(layout='wide', page_title=config.page_name, initial_sidebar_state="expanded")
+    set_background(config.background_img) 
 
-    # header
-    st.title('House Rocket Sales :house_with_garden:')  
-    st.header('Indentifying houses por purchase and resale at King County, USA')
-    st.header('')
+    extract = Extrator()
+    transform = Transformador()
+    load = Carga()
 
-    # ETL
-    # data extraction
-    path = 'data/kc_house_data.csv'    
-    data = get_data( path )
+    # extract
+    df_raw = extract.obter_dados(caminho_arquivo=config.raw_data, colunas_data=config.raw_date_cols)
+    # transform
+    df = transform.corrigir_tipos(dataframe=df_raw)
+    df = transform.remover_colunas(dataframe=df,colunas_remocao=config.cols_remove)
+    df = transform.tratar_outliers(dataframe=df)
+    df = transform.criar_novos_atributos(dataframe=df)
+    df_aux1 = transform.calcular_mediana_por_regiao(dataframe=df)
+    df_aux2 = transform.calcular_mediana_por_estacao_regiao(dataframe=df)
+    df_prd = transform.criar_dataframe_final(dataframe=df, df_regional_median=df_aux1, df_season_region_median=df_aux2)
+    # load
+    cards = load.criar_cards(df_prd)
+    tabs = load.criar_tabelas(df_prd)
+    report, columns = load.criar_dataframe_relatorio(df_prd)
+    plot_pareto = load.criar_grafico_pareto(tabs[2])
+    df_map = load.criar_dataframe_mapa(tabs[3])
+    region, condition, suggestion = load.criar_filtros(df_prd)  
+
+    # sidebar
+    with st.sidebar:
+        st.logo(config.logo_img)
+        st.write(config.page_title)
+        st.divider()
+        st.subheader(f"Desenvolvido por Rodrigo Vieira {emoji.men_tech_dark}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.markdown(
+            config.social_linkedin.format(base64.b64encode(open("img/icons/linkedin-brands-solid.png", "rb").read()).decode())
+            ,unsafe_allow_html=True
+        )
+        c2.markdown(
+            config.social_github.format(base64.b64encode(open("img/icons/github-brands-solid.png", "rb").read()).decode())
+            ,unsafe_allow_html=True
+        )   
+        c3.markdown(
+            config.social_medium.format(base64.b64encode(open("img/icons/medium-brands-solid.png", "rb").read()).decode())
+            ,unsafe_allow_html=True
+        )     
+        c4.markdown(
+            config.social_email.format(base64.b64encode(open("img/icons/envelope-solid.png", "rb").read()).decode())
+            ,unsafe_allow_html=True
+        )        
+        st.divider()
+        st.write("Como você avalia este dashboard?")
+        selected = st.feedback("stars")
+        if selected is not None:
+            st.caption("Obrigado pelo seu feedback :relieved:")
+      
+    # cabecalho
+    st.logo(config.logo_img)
+    st.write(config.page_title)
+    st.divider()
+
+    # metricas
+    st.write("### Métricas")
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    with st.container(border=True):
+        col1.metric(label="Custo total da base", value=cards[1])
+        col2.metric(label="Imóveis na base", value=cards[0])
+        col3.metric(label="Imóveis sugeridos revenda", value=cards[2])
+        col4.metric(label="Investimento total previsto", value=cards[3])
+        col5.metric(label="Faturamento total previsto", value=cards[4])
+        col6.metric(label="Lucro previsto", value=cards[5], delta=cards[6])
     
-    # data transformation
-    df = set_features( data_transformation( data ) )    
-    filters = set_filters ( df )  
-    regional_median = get_regional_median( df )
-    season_median = get_season_median( df )     
-    pl = purchase_list( df, regional_median )
-    plot_purchase(pl, filters[0], filters[1])
-    geodata = get_geolocation ( pl )
-
-    with st.container():
-        col1, col2 = st.columns(2)
-        with col1:
-            map_data, insights_data = report_sales(pl, geodata, season_median, filters[0], filters[1])        
-        with col2:
-            show_insights(insights_data)
-            
-    show_map( map_data )
-
-    st.caption('Developed by Rodrigo Vieira')
+    # abas
+    tab1, tab2, tab3, tab4 = st.tabs(["Gráficos :bar_chart:", "Pareto :chart_with_upwards_trend:", "Mapas :world_map:", "Relatório :page_with_curl:"])
+    # graficos
+    with tab1:
+        tab1_col1, tab1_col2 = st.columns(2) 
+        with tab1_col1:
+            st.write("### Imóveis por estado de conservação")
+            st.pyplot(load.criar_grafico_imoveis_conservacao(tabs[4]))
+        with tab1_col2:
+            st.write("### Rentabilidade por estação do ano") 
+            st.pyplot(load.criar_grafico_rentabilidade(tabs[0]))
+    # pareto
+    with tab2:
+        st.write("### Análise de Pareto")        
+        st.pyplot(plot_pareto) 
+    # mapas
+    with tab3:
+        st.write("### Localização dos imóveis")
+        with st.expander("Configurações do mapa"):
+            st.write("Filtros")
+            mfiltro1, mfiltro2, mfiltro3, mfiltro4 = st.columns(4,vertical_alignment='center')
+            with mfiltro1:
+                mdesabilitar_filtros = st.checkbox('Desabilitar filtros', key='mapa_des', value=False)
+            with mfiltro2:
+                mfiltro_regiao = st.multiselect('Região', region, key='mapa_regiao', default=region, disabled=mdesabilitar_filtros)
+            with mfiltro3:
+                mfiltro_condicao_imovel = st.multiselect('Condição do imóvel', condition, key='mapa_condicao', default=condition, disabled=mdesabilitar_filtros)
+            with mfiltro4:
+                mfiltro_sugestao_compra = st.multiselect('Sugestão de compra', suggestion, key='mapa_sugestao', default='Sim', disabled=mdesabilitar_filtros)        
+        if mdesabilitar_filtros | (len(mfiltro_regiao) == 0 | len(mfiltro_condicao_imovel) == 0 | len(mfiltro_sugestao_compra) == 0):
+            map_data = report.copy()
+        else:
+            map_data = report.loc[report['Região'].astype(int).isin(mfiltro_regiao) & report['Conservação'].isin(mfiltro_condicao_imovel) & report['Sugerida compra'].isin(mfiltro_sugestao_compra)].copy()
+        load.criar_mapa(map_data)
+    # relatorio
+    with tab4:
+        st.write("#### Relatório")
+        with st.expander("Configurações do relatório"):
+            options = st.multiselect("Colunas do relatório", options=columns, default=columns, placeholder="Selecione uma ou mais opções")
+            st.write("Filtros")
+            filtro1, filtro2, filtro3, filtro4 = st.columns(4,vertical_alignment='center')
+            with filtro1:
+                desabilitar_filtros = st.checkbox('Desabilitar filtros', key='report_des', value=True)
+            with filtro2:
+                filtro_regiao = st.multiselect('Região', region, key='report_regiao', disabled=desabilitar_filtros)
+            with filtro3:
+                filtro_condicao_imovel = st.multiselect('Condição do imóvel', condition, key='report_condicao', disabled=desabilitar_filtros)
+            with filtro4:
+                filtro_sugestao_compra = st.multiselect('Sugestão de compra', suggestion, key='report_sugestao', disabled=desabilitar_filtros)
+        if desabilitar_filtros | (len(filtro_regiao) == 0 | len(filtro_condicao_imovel) == 0 | len(filtro_sugestao_compra) == 0):
+            data_report = report.copy()
+        else:
+            data_report = report.loc[report['Região'].astype(int).isin(filtro_regiao) & report['Conservação'].isin(filtro_condicao_imovel) & report['Sugerida compra'].isin(filtro_sugestao_compra)].copy()
+        st.dataframe(data_report[options].reset_index(drop=True))

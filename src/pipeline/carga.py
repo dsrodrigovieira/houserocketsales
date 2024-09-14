@@ -1,9 +1,10 @@
+import folium
 import pandas            as pd
-import streamlit         as st
-import plotly.express    as px
+import seaborn           as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
-import logging
+from streamlit_folium    import folium_static
+from folium.plugins      import MarkerCluster
 
 class Carga(object):
     """Classe responsável pela carga dos dados para o dashboard."""
@@ -59,19 +60,19 @@ class Carga(object):
         val_metric_2 = dataframe['price'].sum()  # Custo total da base
         metric_2 = f"${val_metric_2 * 1e-9:1.1f}B"  # Custo total formatado
 
-        metric_3 = dataframe[dataframe['buy'] == "Yes"]['id'].count()  # Total imóveis sugeridos para compra
+        metric_3 = dataframe[dataframe['buy'] == "Sim"]['id'].count()  # Total imóveis sugeridos para compra
 
-        val_metric_4 = dataframe[dataframe['buy'] == "Yes"]['price'].sum()  # Investimento total previsto
+        val_metric_4 = dataframe[dataframe['buy'] == "Sim"]['price'].sum()  # Investimento total previsto
         metric_4 = f"${val_metric_4 * 1e-6:1.1f}M"  # Investimento total formatado
 
-        val_metric_5 = dataframe[dataframe['buy'] == "Yes"]['sell_price'].sum()  # Faturamento total previsto
+        val_metric_5 = dataframe[dataframe['buy'] == "Sim"]['sell_price'].sum()  # Faturamento total previsto
         metric_5 = f"${val_metric_5 * 1e-6:1.1f}M"  # Faturamento total formatado
 
-        val_metric_6 = dataframe[dataframe['buy'] == "Yes"]['profit'].sum()  # Lucro total previsto
+        val_metric_6 = dataframe[dataframe['buy'] == "Sim"]['profit'].sum()  # Lucro total previsto
         metric_6 = f"${val_metric_6 * 1e-6:1.1f}M"  # Lucro total formatado
 
         # Lucro total previsto %
-        aux = dataframe[dataframe['buy'] == "Yes"][['price', 'profit']].sum().reset_index()
+        aux = dataframe[dataframe['buy'] == "Sim"][['price', 'profit']].sum().reset_index()
         aux.columns = ['feature', 'value']
         val = (aux['value'].pct_change() + 1).dropna().values[0]
         metric_7 = f"{val * 100:.1f}%"
@@ -97,7 +98,7 @@ class Carga(object):
 
         # Rentabilidade por estação do ano
         tbl_1 = (
-            dataframe[dataframe['buy'] == "Yes"]
+            dataframe[dataframe['buy'] == "Sim"]
             .groupby('season')['profit']
             .sum()
             .sort_values(ascending=False)
@@ -111,7 +112,7 @@ class Carga(object):
 
         # Pareto de lucro por região
         tbl_3 = (
-            dataframe[dataframe['buy'] == "Yes"]
+            dataframe[dataframe['buy'] == "Sim"]
             .groupby('zipcode')['profit']
             .sum()
             .reset_index()
@@ -128,10 +129,11 @@ class Carga(object):
         tbl_4.columns = [col.capitalize().replace('_', ' ') for col in tbl_4.columns]
         tbl_4['Season'] = tbl_4['Season'].apply(lambda x: x.capitalize())
         tbl_4['Price'] = tbl_4['Price'].apply(lambda x: f"${x * 1e-3:1.1f}K")
-        tbl_4['Sell price'] = tbl_4['Sell price'].apply(lambda x: f"${x * 1e-3:1.1f}K" if x != 0 else f"${x}")
+        tbl_4['Sell price'] = tbl_4['Sell price'].apply(lambda x: f"${x * 1e-3:1.1f}K" if x != 0 else "N/A")
         min_profit_size = dataframe.loc[dataframe['profit'] != 0, 'profit'].min() * .7 # Tamanho mínimo para as bolhas no mapa
         tbl_4['size'] = tbl_4['Profit'].apply(lambda x: int(min_profit_size) if x == 0 else int(x))
-        tbl_4['Profit'] = tbl_4['Profit'].apply(lambda x: f"${x * 1e-3:1.1f}K" if x != 0 else f"${x}")
+        tbl_4['Profit'] = tbl_4['Profit'].apply(lambda x: f"${x * 1e-3:1.1f}K" if x >= 0 else "N/A")
+        tbl_4[['Id','Zipcode']] = tbl_4[['Id','Zipcode']].astype(str)
 
         # Imóveis por estado de conservação
         tbl_5 = dataframe[['condition_type', 'id']].groupby('condition_type').count().sort_values('id', ascending=False).reset_index()
@@ -264,41 +266,26 @@ class Carga(object):
         # ax2.grid(True)
         return fig
     
-    def make_map(self,  mapdata = pd.DataFrame, filter_region = list, filter_clear = bool ) -> pd.DataFrame: 
-        """Crate scatter map"""  
-        if type(mapdata.shape) != tuple:
-            logging.error(f"make_map@load.py - Couldn't find dataframe. Value is empty.")
-        else:
-            cols = ['Id', 'Lat', 'Long', 'Zipcode', 'Buy', 'Season', 'Price', 'Sell price', 'Profit', 'size']
-            if False in [cols[i] in list(mapdata.columns) for i in range(len(cols))]:
-                logging.error(f"make_map@load.py - Couldn't find columns within the dataframe. Expected: {', '.join(cols)}")    
-            else:
-                if filter_clear:
-                    mapdata
-                else:
-                    mapdata = mapdata.loc[mapdata['Zipcode']==filter_region]
-                
-                # _map = px.scatter_mapbox( mapdata,
-                #                         lat='Lat',
-                #                         lon='Long',                            
-                #                         color='Buy',
-                #                         color_discrete_sequence=['#999999','#0F3D6E'],
-                #                         zoom=10,
-                #                         size='size',
-                #                         hover_data={'Id': True,
-                #                                     'Lat': False,
-                #                                     'Long': False,
-                #                                     'Zipcode': True,
-                #                                     'Buy': False,
-                #                                     'Season': True,
-                #                                     'Price': True,
-                #                                     'Sell price': True,
-                #                                     'Profit': True}
-                #                         )
-                # _map.update_layout(mapbox_style='carto-positron')
-                # _map.update_layout(height=600, margin = {'r':0,'t':0,'l':0,'b':0})
-                # _map.show()        
-        return mapdata
+    def criar_dataframe_mapa(self, dataframe = pd.DataFrame ) -> pd.DataFrame: 
+        """Cria um DataFrame formatado para o mapa.
+
+        Args:
+            dataframe: DataFrame original.
+
+        Returns:
+            Um DataFrame formatado para o mapa.
+        """        
+        if not isinstance(dataframe, pd.DataFrame):
+            raise ValueError("O dataframe não é válido.")
+
+        colunas_esperadas = ['Id', 'Lat', 'Long', 'Zipcode', 'Buy', 'Season', 'Price', 'Sell price', 'Profit', 'size']
+        if not all(coluna in dataframe.columns for coluna in colunas_esperadas):
+            raise ValueError(f"As colunas '{', '.join(colunas_esperadas)}' não foram encontradas no DataFrame.")
+        
+        colunas_renomeadas = ['Id', 'Lat', 'Long', 'Região', 'Sugerida compra', 'Estação', 'Preço de custo', 'Preço de venda', 'Lucro esperado', 'size']
+        dataframe.columns = colunas_renomeadas
+
+        return dataframe
     
     def criar_dataframe_relatorio(self, dataframe: pd.DataFrame) -> tuple:
         """Cria um DataFrame formatado para relatórios.
@@ -313,8 +300,8 @@ class Carga(object):
         if not isinstance(dataframe, pd.DataFrame):
             raise ValueError("O dataframe não é válido.")
 
-        colunas_esperadas = ['id', 'zipcode', 'price', 'sqft_lot', 'condition_type', 'buy', 'sell_price', 'season',
-                             'bathrooms', 'bedrooms', 'floors', 'waterfront', 'yr_built', 'yr_renovated']
+        colunas_esperadas = ['id', 'zipcode', 'price', 'sqft_lot', 'condition_type', 'buy', 'sell_price', 'profit', 'season',
+                             'bathrooms', 'bedrooms', 'floors', 'waterfront', 'yr_built', 'yr_renovated', 'lat', 'long']
         # Verificar se as colunas esperadas estão presentes
         if not all(coluna in dataframe.columns for coluna in colunas_esperadas):
             raise ValueError(f"As colunas necessárias não foram encontradas: {', '.join(colunas_esperadas)}")
@@ -332,7 +319,8 @@ class Carga(object):
                 'sqft_lot': 'm² Lote',
                 'condition_type': 'Conservação',
                 'buy': 'Sugerida compra',
-                'sell_price': 'Preço sugerido',
+                'sell_price': 'Preço de venda',
+                'profit': 'Lucro esperado',
                 'season': 'Estação sugerida',
                 'bathrooms': 'Nº banheiros',
                 'bedrooms': 'Nº quartos',
@@ -348,11 +336,127 @@ class Carga(object):
         # Formatar valores e converter tipos
         df['price'] = df['price'].apply(formatar_valor_monetario)
         df['sell_price'] = df['sell_price'].apply(formatar_valor_monetario)
-        df['waterfront'] = df['waterfront'].apply(lambda x: 'Yes' if x == 1 else 'No')
+        df['waterfront'] = df['waterfront'].apply(lambda x: 'Sim' if x == 1 else 'Não')
         df['yr_renovated'] = df['yr_renovated'].apply(lambda x: 'N/A' if x == 0 else str(x))
+        min_profit_size = df.loc[df['profit'] != 0, 'profit'].min() * .7 # Tamanho mínimo para as bolhas no mapa
+        df['size'] = df['profit'].apply(lambda x: int(min_profit_size) if x == 0 else int(x))
+        df['profit'] = df['profit'].apply(formatar_valor_monetario)
         df[['id', 'yr_built', 'yr_renovated', 'zipcode']] = df[['id', 'yr_built', 'yr_renovated', 'zipcode']].astype(str)
 
         # Renomear colunas
         renomear_colunas(df)
 
         return df, df.columns    
+    
+    def criar_grafico_imoveis_conservacao(self, data:pd.DataFrame) -> plt.Figure:
+        """Cria um gráfico de barras horizontais para visualizar a distribuição de imóveis por estado de conservação.
+
+        Args:
+            data: DataFrame com os dados.   
+
+        Returns:
+            Um objeto matplotlib.figure.Figure.
+        """  
+        # Verificar se as colunas necessárias estão presentes
+        colunas_necessarias = ['id', 'condition_type']
+        if not all(coluna in data.columns for coluna in colunas_necessarias):
+            raise ValueError(f"As colunas necessárias não foram encontradas: {', '.join(colunas_necessarias)}")  
+              
+        fig = plt.figure() 
+        ax = sns.barplot(data, x='id', y='condition_type')
+        ax.spines[['top','right','bottom']].set_visible(False)
+        ax.grid(False)
+        plt.ylabel('Estado de Conservação',fontsize=10)
+        plt.xlabel('')
+        plt.tick_params(
+            axis='x',          # changes apply to the x-axis
+            which='both',      # both major and minor ticks are affected
+            bottom=False,      # ticks along the bottom edge are off
+            top=False,         # ticks along the top edge are off
+            labelbottom=False) # labels along the bottom edge are off            
+        plt.yticks(fontsize=12)
+        for i, val in enumerate(data['id']):
+            if i == 0:
+                ax.annotate(f"{val:,d}",(val,i),ha="right",fontsize=12,xytext=(val-(val*.02), i),color="white",fontweight="bold")
+            else:
+                ax.annotate(f"{val:,d}",(val,i),ha="left",fontsize=12,xytext=(val+(val*.02), i),fontweight="bold") 
+        return fig
+
+    def criar_grafico_rentabilidade(self, data: pd.DataFrame) -> plt.Figure:
+        """Cria um gráfico de barras horizontais para visualizar a distribuição da rentabilidade dos imóveis por estação do ano.
+
+        Args:
+            data: DataFrame com os dados.   
+
+        Returns:
+            Um objeto matplotlib.figure.Figure.
+        """  
+        # Verificar se as colunas necessárias estão presentes
+        colunas_necessarias = ['profit', 'season']
+        if not all(coluna in data.columns for coluna in colunas_necessarias):
+            raise ValueError(f"As colunas necessárias não foram encontradas: {', '.join(colunas_necessarias)}")  
+                
+        fig = plt.figure() 
+        ax = sns.barplot(data, x='profit', y='season')
+        ax.spines[['top','right','bottom']].set_visible(False)
+        ax.grid(False)
+        plt.ylabel('Estação',fontsize=10)
+        plt.xlabel('')
+        plt.tick_params(
+            axis='x',          # changes apply to the x-axis
+            which='both',      # both major and minor ticks are affected
+            bottom=False,      # ticks along the bottom edge are off
+            top=False,         # ticks along the top edge are off
+            labelbottom=False) # labels along the bottom edge are off            
+        plt.yticks(fontsize=12)
+        for i, val in enumerate(data['profit']):
+            ax.annotate(f"${val*1e-6:1.1f}M",(val,i),ha="right",fontsize=12,xytext=(val-(val*.02), i),color="white", fontweight="bold")
+        return fig    
+    
+    def criar_mapa(self, map_data: pd.DataFrame) -> None:
+        """Cria um mapa de pontos interativo.
+
+        Args:
+            map_data: DataFrame com os dados do mapa.
+        """
+
+        def criar_popup(row, colunas_popup):
+            """Cria o conteúdo do popup para um marcador.
+
+            Args:
+                row: Uma linha do DataFrame.
+                colunas_popup: Lista com as colunas a serem incluídas no popup.
+
+            Returns:
+                Um objeto folium.Popup.
+            """
+
+            html = """
+                <ul style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; list-style-type: none; font-size: small;">
+                """
+            for coluna in colunas_popup:
+                html += f"<li><b>{coluna}:</b> {row[coluna]}</li>"
+            html += "</ul>"
+            iframe = folium.IFrame(html=html, width=300, height=180)
+            return folium.Popup(iframe)
+
+        colunas_popup = ['ID', 'Região', 'm² Lote', 'Conservação','Custo',
+                         'Sugerida compra', 'Preço de venda', 'Estação sugerida','Lucro esperado']
+        # Verificar se as colunas necessárias estão presentes
+        colunas_necessarias = ['lat', 'long'] + colunas_popup
+        if not all(coluna in map_data.columns for coluna in colunas_necessarias):
+            raise ValueError(f"As colunas necessárias não foram encontradas: {', '.join(colunas_necessarias)}")
+        # Calcular o centro do mapa        
+        zoom_lat_long = [map_data['lat'].mean(),map_data['long'].mean()]
+        # Criar o mapa
+        marker_map = folium.Map( location=zoom_lat_long,
+                                 default_zoom_start=50,
+                                 width='100%' )
+        marker_cluster = MarkerCluster().add_to(marker_map)
+        # Adicionar marcadores
+        for index, row in map_data.iterrows():
+            popup = criar_popup(row, colunas_popup) 
+            folium.Marker( [row['lat'],row['long']], popup=popup, 
+                           tooltip=f"ID: {row['ID']} | Sugerida compra: {row['Sugerida compra']}" ).add_to(marker_cluster)
+        folium_static(marker_map) 
+        return None
