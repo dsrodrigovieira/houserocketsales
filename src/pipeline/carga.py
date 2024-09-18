@@ -225,45 +225,8 @@ class Carga(object):
 
         # Ocultar linhas de grade no eixo principal e exibi-las no secundário
         ax.grid(False)
-        ax2.grid(True)                
+        ax2.grid(True)  
 
-        # def millions(x, pos):
-        #     """Formata valores para exibir milhões."""
-        #     return '$ %1.1fM' % (x * 1e-6)
-        # # estilo bmh
-        # plt.style.use("bmh")
-        # fig, ax = plt.subplots(figsize=(20,8))
-        # # cria um segundo grafico que compartilha o eixo X mas tem o eixo Y independente
-        # ax2 = ax.twinx()
-        # # estrutura dos gráficos
-        # ax.bar(dataframe['zipcode'],dataframe['profit'],color="C0")
-        # ax2.plot(dataframe['zipcode'],dataframe['perc_acumulado'],color='C4',marker="o")
-        # # arrumando eixo y coluna
-        # ax.set_ylabel("Lucro por região", color="C0")
-        # ax.tick_params(axis="y", labelcolor="C0")
-        # # arrumando eixo y linha
-        # ax2.set_ylabel("Percentual", color="C4")
-        # ax2.tick_params(axis="y", labelcolor="C4")
-        # # formatar percentual
-        # ax.yaxis.set_major_formatter(mtick.FuncFormatter(millions))
-        # ax2.yaxis.set_major_formatter(mtick.PercentFormatter(1))
-        # # rotacao eixo x
-        # ax.tick_params(axis="x", rotation=90)
-        # for i, percentual in enumerate(dataframe['perc_acumulado']):
-        #     if i < 25:
-        #         ax2.annotate(f"{percentual:.0%}", (i, percentual), textcoords="offset points", xytext=(0, 20), ha="center", color="C4", fontweight="bold")
-        #     else:
-        #         if i%2 == 1:
-        #             ax2.annotate(f"{percentual:.0%}", (i, percentual), textcoords="offset points", xytext=(10, -20), ha="center", color="C4", fontweight="bold")
-        #         else:
-        #             ax2.annotate(f"{percentual:.0%}", (i, percentual), textcoords="offset points", xytext=(0, 10), ha="center", color="C4", fontweight="bold",)
-        # for i, profit in enumerate(dataframe['profit']):
-        #     if i < 38:
-        #         ax.annotate(f"${profit*1e-6:1.1f}M", (i, profit), textcoords="offset points", xytext=(0, -40), ha="center", rotation=90, color="white", fontweight="bold")
-        #     else:
-        #         ax.annotate(f"${profit*1e-6:1.1f}M", (i, profit), textcoords="offset points", xytext=(0, 10), ha="center", rotation=90, color="C0", fontweight="bold")        
-        # ax.grid(False)
-        # ax2.grid(True)
         return fig
     
     def criar_dataframe_mapa(self, dataframe = pd.DataFrame ) -> pd.DataFrame: 
@@ -346,7 +309,11 @@ class Carga(object):
         # Renomear colunas
         renomear_colunas(df)
 
-        return df, df.columns    
+        # Remover colunas lat, long e size
+        aux_colunas = df.columns.to_list()
+        [ aux_colunas.remove(j) if aux_colunas[i] in ['lat','long','size'] else aux_colunas[i] for i,j in enumerate(aux_colunas) ]
+
+        return df, aux_colunas
     
     def criar_grafico_imoveis_conservacao(self, data:pd.DataFrame) -> plt.Figure:
         """Cria um gráfico de barras horizontais para visualizar a distribuição de imóveis por estado de conservação.
