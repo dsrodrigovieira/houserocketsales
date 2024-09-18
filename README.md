@@ -1,4 +1,4 @@
-# [Venda de imóveis em King County, EUA](https://dsr-houserocketsales.herokuapp.com/)
+# [Venda de imóveis em King County, EUA](https://dsr-houserocketsales.streamlit.app/)
 
 ## Identificação de imóveis para compra e revenda
 ![](reports/figures/readme/header.png)
